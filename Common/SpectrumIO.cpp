@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "SpectrumIO.h"
+#include "../Common.h"
 #include <vector>
 
 CSpectrumIO::CSpectrumIO()
@@ -12,7 +13,7 @@ CSpectrumIO::~CSpectrumIO()
 
 int CSpectrumIO::readSTDFile(CString filename, CSpectrum *curSpec){
 	char tmpStr[1024];
-	int tmpInt, tmpInt2, tmpInt3, i;
+	int tmpInt, tmpInt2, tmpInt3;
 	double tmpDouble;
 
 	FILE *f = fopen(filename, "r");
@@ -39,15 +40,15 @@ int CSpectrumIO::readSTDFile(CString filename, CSpectrum *curSpec){
 		return 1;
 	}
 
-	curSpec->length = tmpInt;
+	curSpec->Resize(tmpInt);
 
 	/* Read the actual data */
-	for(i = 0; i < curSpec->length; ++i){
+	for(int i = 0; i < curSpec->Length(); ++i){
 		if(0 == fscanf(f, "%lf\n", &tmpDouble)){
 			fclose(f);
 			return 1;
 		}else{
-			curSpec->I[i] = tmpDouble;
+			curSpec->data[i] = tmpDouble;
 		}
 	}
 
@@ -62,7 +63,7 @@ int CSpectrumIO::readSTDFile(CString filename, CSpectrum *curSpec){
 		fclose(f);
 		return 1;
 	}else{
-		curSpec->spectrometerSerial.Format(tmpStr);
+		curSpec->spectrometerSerial = std::string(tmpStr);
 	}
 	
 	// the name of the detector, this is ignored at the moment
@@ -158,6 +159,8 @@ int CSpectrumIO::readTextFile(CString filename, CSpectrum *curSpec){
 		return FALSE;
 	}
 
+	curSpec->Resize(0);
+
 	CString szLine2;
 	while(fileRef.ReadString(szLine2)){
 		char* szToken = (char*)(LPCSTR)szLine2;
@@ -167,13 +170,12 @@ int CSpectrumIO::readTextFile(CString filename, CSpectrum *curSpec){
 			ret = sscanf(szToken, "%lf\t%lf", &tmpDouble1, &tmpDouble2);
 
 		if(ret == 1){
-			curSpec->I[tmpInt] = tmpDouble1;
+			curSpec->AppendPoint(tmpDouble1);
 		}else if(ret == 2){
-			curSpec->I[tmpInt] = tmpDouble2;
+			curSpec->AppendPoint(tmpDouble2);
 		}else{
 
 		}
-		curSpec->length = ++tmpInt;
 
 		szToken = NULL;
 		}
@@ -196,11 +198,11 @@ bool CSpectrumIO::WriteStdFile(const CString &fileName, const CSpectrum& spectru
 
 	fprintf(f, "GDBGMNUP\n");
 	fprintf(f, "1\n");
-	fprintf(f, "%ld\n", spectrum.length);
+	fprintf(f, "%ld\n", spectrum.Length());
 
-	for (long ii = 0; ii < spectrum.length; ++ii)
+	for (long ii = 0; ii < spectrum.Length(); ++ii)
 	{
-		fprintf(f, "%.9lf\n", spectrum.I[ii]);
+		fprintf(f, "%.9lf\n", spectrum.data[ii]);
 	}
 
 	// Find the name of the file itself (removing the path)
@@ -209,8 +211,8 @@ bool CSpectrumIO::WriteStdFile(const CString &fileName, const CSpectrum& spectru
 	Common::GetFileName(name);
 
 	fprintf(f, "%s\n", (LPCTSTR)name);                /* The name of the spectrum */
-	fprintf(f, "%s\n", (LPCTSTR)spectrum.spectrometerModel);  /* The name of the spectrometer */
-	fprintf(f, "%s\n", (LPCTSTR)spectrum.spectrometerSerial); // why is there a second output of spectrometer name?
+	fprintf(f, "%s\n", spectrum.spectrometerModel.c_str());  /* The name of the spectrometer */
+	fprintf(f, "%s\n", spectrum.spectrometerSerial.c_str()); // why is there a second output of spectrometer name?
 
 	fprintf(f, "%02d.%02d.%02d\n", spectrum.date[2], spectrum.date[1], spectrum.date[2]);
 	fprintf(f, "%02d:%02d:%02d\n", spectrum.startTime[0], spectrum.startTime[1], spectrum.startTime[2]);
@@ -219,18 +221,18 @@ bool CSpectrumIO::WriteStdFile(const CString &fileName, const CSpectrum& spectru
 	fprintf(f, "0.0\n");
 	fprintf(f, "SCANS %ld\n", spectrum.scans);
 	fprintf(f, "INT_TIME %ld\n", spectrum.exposureTime);
-	fprintf(f, "SITE %s\n", (LPCTSTR)spectrum.name);
+	fprintf(f, "SITE %s\n", spectrum.name.c_str());
 	fprintf(f, "LONGITUDE %f\n", spectrum.lon);
 	fprintf(f, "LATITUDE %f\n", spectrum.lat);
 
 	if (extendedFormat) {
 		double minValue = 0.0, maxValue = 0.0, averageValue = 0.0, variance = 0.0;
 		spectrum.GetMinMax(minValue, maxValue);
-		spectrum.GetAverage(averageValue, variance);
+		spectrum.GetStatistics(averageValue, variance);
 
 		fprintf(f, "Altitude = %.1lf\n", spectrum.altitude);
 		fprintf(f, "Author = \"\"\n");
-		fprintf(f, "Average = 0\n");
+		fprintf(f, "Average = %.6lf\n", averageValue);
 		fprintf(f, "AzimuthAngle = 0\n");
 		fprintf(f, "Delta = 0\n");
 		fprintf(f, "DeltaRel = 0\n");
@@ -246,26 +248,26 @@ bool CSpectrumIO::WriteStdFile(const CString &fileName, const CSpectrum& spectru
 		fprintf(f, "LightPath = 0\n");
 		fprintf(f, "LightSource = \"\"\n");
 		fprintf(f, "Longitude = %.6lf\n", spectrum.lon);
-		fprintf(f, "Marker = %ld\n", spectrum.length / 2);
-		fprintf(f, "MathHigh = %ld\n", spectrum.length - 1);
+		fprintf(f, "Marker = %ld\n", spectrum.Length() / 2);
+		fprintf(f, "MathHigh = %ld\n", spectrum.Length() - 1);
 		fprintf(f, "MathLow = 0\n");
-		fprintf(f, "Max = 0\n");
-		fprintf(f, "MaxChannel = %ld\n", spectrum.length);
-		fprintf(f, "Min = 0\n");
+		fprintf(f, "Max = %.6lf\n", maxValue);
+		fprintf(f, "MaxChannel = %ld\n", spectrum.Length());
+		fprintf(f, "Min = %.6lf\n", minValue);
 		fprintf(f, "MinChannel = 0\n");
 		fprintf(f, "MultiChannelCounter = 0\n");
-		fprintf(f, "Name = \"%s\"\n", (LPCTSTR)spectrum.name);
+		fprintf(f, "Name = \"%s\"\n", spectrum.name.c_str());
 		fprintf(f, "NumScans = %ld\n", spectrum.scans);
 		fprintf(f, "OpticalDensity = 0\n");
-		fprintf(f, "OpticalDensityCenter = %ld\n", spectrum.length / 2);
+		fprintf(f, "OpticalDensityCenter = %ld\n", spectrum.Length() / 2);
 		fprintf(f, "OpticalDensityLeft = 0\n");
-		fprintf(f, "OpticalDensityRight = %ld\n", spectrum.length - 1);
+		fprintf(f, "OpticalDensityRight = %ld\n", spectrum.Length() - 1);
 		fprintf(f, "Pressure = 0\n");
 		fprintf(f, "Remark = \"\"\n");
 		fprintf(f, "ScanGeometry = 0\n"); //(DoasCore.Math.ScanGeometry)SAZ: 137.41237083135 SZA: 31.5085943481828 LAZ: 298.523110145623 LAZ: 129.285101310559 Date: 1/5/2007 10:35:07 Lat.: 0 Lon.: 0\n");
 		fprintf(f, "ScanMax = 0\n");
 		fprintf(f, "Temperature = 0\n");
-		fprintf(f, "Variance = 0\n");
+		fprintf(f, "Variance = %.6lf\n", variance);
 	}
 
 	fclose(f);

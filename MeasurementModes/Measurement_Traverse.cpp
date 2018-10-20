@@ -214,6 +214,7 @@ void CMeasurement_Traverse::Run(){
 		}
 
 		/* ----------------- Save the spectrum(-a) -------------------- */
+		// TODO: Convert these into using CSpectrum for providing all the information required
 		if (m_useGps) {
 			for (int i = 0; i < m_NChannels; ++i) {
 				CSpectrumIO::WriteStdFile(m_stdfileName[i], tmpSpec[i], m_detectorSize, startDate, m_spectrumGpsData[m_spectrumCounter].time, m_spectrumGpsData[m_spectrumCounter].time + elapsedSecond, m_spectrumGpsData[m_spectrumCounter], m_integrationTime, m_spectrometerName, m_measurementBaseName, m_totalSpecNum);

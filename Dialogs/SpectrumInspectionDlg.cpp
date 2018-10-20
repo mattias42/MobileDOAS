@@ -294,7 +294,7 @@ void CSpectrumInspectionDlg::DrawSpectrum(){
 
 		m_spectrumGraph.SetPlotColor(m_spectrumColor);
 		m_spectrumGraph.SetRange(range.minLambda, range.maxLambda, 0, range.minIntens, range.maxIntens, 0);
-		m_spectrumGraph.XYPlot(m_number, spectrum.I, spectrum.length, Graph::CGraphCtrl::PLOT_FIXED_AXIS | Graph::CGraphCtrl::PLOT_CONNECTED);
+		m_spectrumGraph.XYPlot(m_number, spectrum.Ptr(), spectrum.Length(), Graph::CGraphCtrl::PLOT_FIXED_AXIS | Graph::CGraphCtrl::PLOT_CONNECTED);
 		
 		FillInSpectrumPropertiesList(&spectrum);
 	}
@@ -314,7 +314,7 @@ void CSpectrumInspectionDlg::GetPlotRange(Graph::CSpectrumGraph::plotRange &rang
 		range.minIntens = 0.0;
 		range.maxIntens	= maxV;
 		range.minLambda = 0.0;
-		range.maxLambda = spectrum->length;
+		range.maxLambda = spectrum->Length();
 		
 		return;
 	}else{
@@ -367,10 +367,10 @@ void CSpectrumInspectionDlg::FillInSpectrumPropertiesList(const CSpectrum *spec)
 
 	if(spec != nullptr){
 		// ---- Show the information to the user... ----
-		str.Format("%s", (LPCTSTR)spec->spectrometerSerial);
+		str.Format("%s", spec->spectrometerSerial.c_str());
 		m_propertyList.SetItemText(index++, 1,		str);
 
-		str.Format("%d", spec->length);
+		str.Format("%d", spec->Length());
 		m_propertyList.SetItemText(index++, 1,		str);
 	
 		str.Format("%.2lf", spec->GetMax());

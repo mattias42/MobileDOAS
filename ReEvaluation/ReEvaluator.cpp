@@ -429,7 +429,7 @@ bool CReEvaluator::DoEvaluation(){
 			}
 
 			// Get the size of the spectra
-			m_settings.m_window.specLength = skySpectrum.length;
+			m_settings.m_window.specLength = skySpectrum.Length();
 
 			// initialize the evaluator
 			evaluator.SetFitWindow(m_settings.m_window);
@@ -520,10 +520,10 @@ bool CReEvaluator::DoEvaluation(){
 					darkSpectrum.Add(offsetSpectrum);
 				}
 
-				memcpy(sky, skySpectrum.I, MAX_SPECTRUM_LENGTH*sizeof(double));
+				memcpy(sky, skySpectrum.Ptr(), skySpectrum.Length() * sizeof(double));
 
 				// do the evaluation
-				evaluator.Evaluate(darkSpectrum.I, sky, curSpectrum.I);
+				evaluator.Evaluate(darkSpectrum.Ptr(), sky, curSpectrum.Ptr());
 
 				// sum the residuals togheter to find enable us to discover if some reference has been forgotten
 				for(int tmpCounter = 0; tmpCounter < (fitHigh - fitLow); ++tmpCounter){
@@ -724,7 +724,7 @@ bool CReEvaluator::ReadSkySpectrum(CSpectrum &spec, int channel){
 	spec.Clear();
 	CSpectrum curSpectrum;
 	GetSpectrum(curSpectrum, 0, channel);
-	spec.length = curSpectrum.length;
+	spec.Resize(curSpectrum.Length());
 	long nAdded = 0;
 
 	// if the average of all spectra is to be used as sky
@@ -1057,8 +1057,8 @@ bool CReEvaluator::GetDarkSpectrum(CSpectrum &dark, int number, int channel){
 		GetSpectrum(dark2, closestBelow, channel);
 
 		double alpha = (specOffset - closestLowerOffset) / (closestHigherOffset - closestLowerOffset);
-		for(int k = 0; k < dark2.length; ++k){
-			dark.I[k] = alpha * dark.I[k] + (1.0 - alpha) * dark2.I[k];
+		for(int k = 0; k < dark2.Length(); ++k){
+			dark.data[k] = alpha * dark.data[k] + (1.0 - alpha) * dark2.data[k];
 		}
 		FILE *f = fopen(m_outputDir + "\\DarkLog.txt", "a+");
 		if(f != nullptr) {
@@ -1146,10 +1146,10 @@ bool CReEvaluator::FindOptimalShiftAndSqueeze(Evaluation::CEvaluation &evaluator
 	// get the spectrum
 	GetSpectrum(curSpectrum, indexOfMaxColumn, channel);
 
-	memcpy(sky, skySpectrum.I, MAX_SPECTRUM_LENGTH*sizeof(double));
+	memcpy(sky, skySpectrum.Ptr(), skySpectrum.Length() * sizeof(double));
 
 	// do the evaluation
-	evaluator.Evaluate(darkSpectrum.I, sky, curSpectrum.I, 5000);
+	evaluator.Evaluate(darkSpectrum.Ptr(), sky, curSpectrum.Ptr(), 5000);
 
 	// Check if the result is reasonable, if not then only allow the shift to wary - not the squeeze
 	if(evaluator.GetChiSquare() > 0.9){
@@ -1161,7 +1161,7 @@ bool CReEvaluator::FindOptimalShiftAndSqueeze(Evaluation::CEvaluation &evaluator
 
 		// do the evaluation again
 		evaluator.SetFitWindow(m_settings.m_window);
-		evaluator.Evaluate(darkSpectrum.I, sky, curSpectrum.I, 5000);
+		evaluator.Evaluate(darkSpectrum.Ptr(), sky, curSpectrum.Ptr(), 5000);
 	}
 
 	// The result
@@ -1254,8 +1254,8 @@ bool CReEvaluator::SaveSpectra(CSpectrum &spec, CString filename, int channel){
 	fileName.Format("%s\\%s_%1d.txt", m_outputDir, filename, channel);
 	FILE *f = fopen(fileName, "w");
 	if(f != nullptr){
-		for(int i = 0; i < spec.length; ++i){
-			fprintf(f, "%lg\n", spec.I[i]);
+		for(int i = 0; i < spec.Length(); ++i){
+			fprintf(f, "%lg\n", spec.data[i]);
 		}
 		fclose(f);
 	}else{
@@ -1312,9 +1312,9 @@ bool  CReEvaluator::IncludeSkySpecInFit(Evaluation::CEvaluation &eval, const CSp
 	// first make a local copy of the sky spectrum
 	CSpectrum tmpSpec = skySpectrum;
 
-	int specLen = tmpSpec.length;
+	int specLen = tmpSpec.Length();
 
-	memcpy(sky, tmpSpec.I, specLen*sizeof(double));
+	memcpy(sky, tmpSpec.Ptr(), specLen*sizeof(double));
 	eval.RemoveOffset(sky, specLen, window.offsetFrom, window.offsetTo);
 	if(window.fitType == FIT_HP_SUB)
 		eval.HighPassBinomial(sky, specLen, 500);
