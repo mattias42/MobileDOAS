@@ -152,7 +152,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="framework.h" />
     <ClInclude Include="include\MobileDoasLib\Communication\SerialConnection.h" />
     <ClInclude Include="include\MobileDoasLib\DateTime.h" />
     <ClInclude Include="include\MobileDoasLib\Definitions.h" />
@@ -171,7 +170,6 @@
     <ClInclude Include="include\MobileDoasLib\ReferenceFitResult.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MobileDoasLib.cpp" />
     <ClCompile Include="src\Communication\SerialConnection.cpp" />
     <ClCompile Include="src\DateTime.cpp" />
     <ClCompile Include="src\DualBeam\DualBeamCalculator.cpp" />
